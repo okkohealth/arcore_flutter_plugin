@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.view.View
-import com.difrancescogianmarco.arcore_flutter_plugin.flutter_models.FlutterArCoreNode
 import com.difrancescogianmarco.arcore_flutter_plugin.utils.ArCoreUtils
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Pose
@@ -131,58 +130,7 @@ open class BaseArCoreView(val activity: Activity, context: Context, messenger: B
 //            return
 //        }
     }
-    
-    
-    fun attachNodeToParent(node: Node?, parentNodeName: String?) {
-        if (parentNodeName != null) {
-            Log.i(TAG, parentNodeName)
-            val parentNode: Node? = arSceneView?.scene?.findByName(parentNodeName)
-            parentNode?.addChild(node)
-        } else {
-            Log.i(TAG, "addNodeToSceneWithGeometry: NOT PARENT_NODE_NAME")
-            arSceneView?.scene?.addChild(node)
-        }
-    }
 
-    fun onAddNode(flutterArCoreNode: FlutterArCoreNode, result: MethodChannel.Result?) {
-        Log.i(TAG, flutterArCoreNode.toString())
-        NodeFactory.makeNode(activity.applicationContext, flutterArCoreNode) { node, throwable ->
-            Log.i(TAG, "inserted ${node?.name}")
-
-/*            if (flutterArCoreNode.parentNodeName != null) {
-                Log.i(TAG, flutterArCoreNode.parentNodeName);
-                val parentNode: Node? = arSceneView?.scene?.findByName(flutterArCoreNode.parentNodeName)
-                parentNode?.addChild(node)
-            } else {
-                Log.i(TAG, "addNodeToSceneWithGeometry: NOT PARENT_NODE_NAME")
-                arSceneView?.scene?.addChild(node)
-            }*/
-            if (node != null) {
-                attachNodeToParent(node, flutterArCoreNode.parentNodeName)
-                for (n in flutterArCoreNode.children) {
-                    n.parentNodeName = flutterArCoreNode.name
-                    onAddNode(n, null)
-                }
-                result?.success(null)
-            } else if (throwable != null) {
-                result?.error("onAddNode", throwable.localizedMessage, null)
-            }
-        }
-    }
-
-    fun removeNode(name: String, result: MethodChannel.Result?) {
-        val node = arSceneView?.scene?.findByName(name)
-        if (node != null) {
-            arSceneView?.scene?.removeChild(node)
-            Log.i(TAG, "removed ${node.name}")
-        }
-        result?.success(null)
-    }
-
-    fun removeNode(node: Node) {
-            arSceneView?.scene?.removeChild(node)
-            Log.i(TAG, "removed ${node.name}")
-    }
 
     fun onPause() {
         Log.i(TAG, "onPause()")

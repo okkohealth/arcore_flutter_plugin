@@ -21,8 +21,7 @@ class ArCoreFaceView extends StatefulWidget {
   _ArCoreFaceViewState createState() => _ArCoreFaceViewState();
 }
 
-class _ArCoreFaceViewState extends State<ArCoreFaceView>
-    with WidgetsBindingObserver {
+class _ArCoreFaceViewState extends State<ArCoreFaceView> with WidgetsBindingObserver {
   @override
   void initState() {
     WidgetsBinding.instance.addObserver(this);
@@ -41,8 +40,7 @@ class _ArCoreFaceViewState extends State<ArCoreFaceView>
       );
     }
     return Center(
-      child: Text(
-          '$defaultTargetPlatform is not  supported by the ar_view plugin'),
+      child: Text('$defaultTargetPlatform is not  supported by the ar_view plugin'),
     );
   }
 
@@ -53,7 +51,6 @@ class _ArCoreFaceViewState extends State<ArCoreFaceView>
     widget.onArCoreViewCreated(
       ArCoreFaceController(
         id: id,
-        enableAugmentedFaces: widget.enableAugmentedFaces,
       ),
     );
   }

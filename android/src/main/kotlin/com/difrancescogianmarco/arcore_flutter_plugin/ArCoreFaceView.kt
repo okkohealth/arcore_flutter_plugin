@@ -29,19 +29,42 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
     private val faceNodeMap = HashMap<AugmentedFace, AugmentedFaceNode>()
     private var faceSceneUpdateListener: Scene.OnUpdateListener
 
+    private var translationX = 0.0f
+    private var translationY = 0.0f
+    private var translationZ = 0.0f
+    private var rotationX = 0.0f
+    private var rotationY = 0.0f
+    private var rotationZ = 0.0f
+    private var cameraX = 0.0f
+    private var cameraY = 0.0f
+    private var cameraZ = 0.0f
+
     init {
         faceSceneUpdateListener = Scene.OnUpdateListener { frameTime ->
             run {
-                //                if (faceRegionsRenderable == null || faceMeshTexture == null) {
-                if (faceMeshTexture == null) {
-                    return@OnUpdateListener
+
+                val frame = arSceneView?.getArFrame()
+                val cameraPose = frame?.getAndroidSensorPose()
+                cameraPose?.let {
+                    cameraX = cameraPose.tx()
+                    cameraY = cameraPose.ty()
+                    cameraZ = cameraPose.tz()
                 }
+
 
                 val faceList = arSceneView?.session?.getAllTrackables(AugmentedFace::class.java)
 
                 faceList?.let {
                     // Make new AugmentedFaceNodes for any new faces.
                     for (face in faceList) {
+                        val center = face.getCenterPose()
+                        translationX = center.tx()//  buffer.get(435)
+                        translationY = center.ty()//  buffer.get(436)
+                        translationZ = center.tz()//  buffer.get(437)
+                        val eulers = quaternionToEuler(center.qw(),center.qx(),center.qy(),center.qz());
+                        rotationX = eulers[0]
+                        rotationY = eulers[1]
+                        rotationZ = eulers[2]
                         if (!faceNodeMap.containsKey(face)) {
                             val faceNode = AugmentedFaceNode(face)
                             faceNode.setParent(arSceneView?.scene)
@@ -67,9 +90,34 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
         }
     }
 
+
+    fun quaternionToEuler(qw: Float, qx: Float, qy: Float, qz: Float): FloatArray {
+        val x:Float
+        val y:Float
+        val z:Float
+
+        // roll (x-axis rotation)
+        val sinr_cosp = 2 * (qw * qx + qy * qz);
+        val cosr_cosp = 1 - 2 * (qx * qx + qy * qy);
+        x = kotlin.math.atan2(sinr_cosp, cosr_cosp);
+
+        // pitch (y-axis rotation)
+        val sinp = 2 * (qw * qy - qz * qx);
+        if (kotlin.math.abs(sinp) >= 1)
+            y = java.lang.Math.copySign(kotlin.math.PI / 2, sinp.toDouble()).toFloat(); // use 90 degrees if out of range
+        else
+            y = kotlin.math.asin(sinp);
+
+        // yaw (z-axis rotation)
+        val siny_cosp = 2 * (qw * qz + qx * qy);
+        val cosy_cosp = 1 - 2 * (qy * qy + qz * qz);
+        z = kotlin.math.atan2(siny_cosp, cosy_cosp);
+
+        return floatArrayOf(x,y,z)
+    }
+
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         if(isSupportedDevice){
-            Log.i(TAG,call.method +"called on supported device")
             when (call.method) {
                 "init" -> {
                     arScenViewInit(call, result)
@@ -79,6 +127,9 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
                     val textureBytes = map["textureBytes"] as ByteArray
                     val skin3DModelFilename = map["skin3DModelFilename"] as? String
                     loadMesh(textureBytes, skin3DModelFilename)
+                }
+                "getNodePosition" -> {
+                    result.success("{\"x\":$translationX,\"y\":$translationY,\"z\":$translationZ,\"rx\":$rotationX,\"ry\":$rotationY,\"rz\":$rotationZ}")
                 }
                 "dispose" -> {
                     Log.i(TAG, " updateMaterials")
@@ -117,13 +168,10 @@ class ArCoreFaceView(activity:Activity,context: Context, messenger: BinaryMessen
     }
 
     private fun arScenViewInit(call: MethodCall, result: MethodChannel.Result) {
-        val enableAugmentedFaces: Boolean? = call.argument("enableAugmentedFaces")
-        if (enableAugmentedFaces != null && enableAugmentedFaces) {
-            // This is important to make sure that the camera stream renders first so that
-            // the face mesh occlusion works correctly.
-            arSceneView?.cameraStreamRenderPriority = Renderable.RENDER_PRIORITY_FIRST
-            arSceneView?.scene?.addOnUpdateListener(faceSceneUpdateListener)
-        }
+        // This is important to make sure that the camera stream renders first so that
+        // the face mesh occlusion works correctly.
+        arSceneView?.cameraStreamRenderPriority = Renderable.RENDER_PRIORITY_FIRST
+        arSceneView?.scene?.addOnUpdateListener(faceSceneUpdateListener)
 
         result.success(null)
     }
